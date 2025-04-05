@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ManiMAtCha Project</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Link to external CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>184 Final Project Proposal</h1>
+    <h2>ManiMAtCha</h2>
+    <p>by Thien Le, Wen Qi, William Ling, Zekai Wang</p>
+  </header>
+
+  <main>
+    <section id="problem-description">
+      <h3>Problem Description</h3>
+      <p>
+        Our project combines MAtCha’s chart-based rendering with mesh-level optimization inspired by NeuManifold to produce high-quality meshes output with less input image needed. We aim to bridge these two methods through a shared pipeline that allows for differentiable mesh loss and improved geometry reconstruction.
+      </p>
+      <p>
+        Our goal is to explore what happens when we combine the strengths of MAtCha Gaussians and NeuManifold. MAtCha’s pipeline has two main parts: it first aligns a series of monocular depth maps from sparse-view images to create a rough 3D surface (a manifold of charts), and then places and optimizes 2D Gaussians along those surfaces for photorealistic rendering. While MAtCha excels at generating good visual quality from just a few images, it doesn't guarantee clean, watertight meshes. We’re building on top of this by adding mesh-level optimization inspired by NeuManifold—specifically, introducing mesh-aware losses and potentially backpropagating through the mesh itself. The idea is to keep MAtCha’s efficient rendering and surface recovery while improving geometry quality, aiming for a final result that’s both photorealistic and mesh-usable for applications like editing, simulation, or 3D printing.
+      </p>
+      <p>
+        Our approach involves adding an additional loss based on the geometry of the generated mesh itself. To do that, we can incorporate NeuManifold’s differentiable marching cubes algorithm, which allows backpropagation through the mesh. The challenge is figuring out how to connect the MAtCha pipeline with NeuManifold’s mesh-based optimization.
+      </p>
+    </section>
+
+    <section id="goals">
+      <h3>Goals and Deliverables</h3>
+      <h4>Baseline Plan</h4>
+      <ul>
+        <li>Implement the MAtCha Gaussians pipeline (or use an existing implementation).</li>
+        <li>Integrate NeuManifold’s differentiable Marching Cubes (DiffMC) to extract a mesh from MAtCha’s surface representation.</li>
+        <li>Introduce a mesh-based loss that backpropagates through the mesh structure.</li>
+        <li>Deliver side-by-side visual comparisons and performance graphs.</li>
+      </ul>
+      <h4>Aspirational Plan</h4>
+      <ul>
+        <li>Generate background.</li>
+        <li>Optimize ???</li>
+        <li>Visualize qualitative improvements (e.g., sharper details, smoother surfaces).</li>
+      </ul>
+    </section>
+
+    <section id="schedule">
+      <h3>Schedule</h3>
+      <ul>
+        <li>
+          <strong>Week 1 (April 7 - 14):</strong> Retesting of the code of NeuManifold and MAtCha on our device. Reproduce Gaussian Surface Elements which can be optimized later.
+        </li>
+        <li>
+          <strong>Week 2 (April 14 - 21):</strong> Optimize the Gaussian Surface Elements and make reports for the final project Milestone.
+        </li>
+        <li>
+          <strong>Week 3 (April 21 - 28):</strong> Finish the part of the mesh image continuing from Gaussian Surface Elements. Won’t do too much this week because there is exam 2.
+        </li>
+        <li>
+          <strong>Week 4 (April 28 - May 5):</strong> Finish up the rest of the project, the mesh image and Gaussian image, and combine them effectively. Optimize the efficiency and effectiveness, and finish the final presentation and all deliverables.
+        </li>
+      </ul>
+    </section>
+
+    <section id="resources">
+      <h3>Resources</h3>
+      <ul>
+        <li><a href="https://anttwo.github.io/matcha/" target="_blank">MAtCha Project</a></li>
+        <li><a href="https://sarahweiii.github.io/neumanifold/" target="_blank">NeuManifold Project</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 ManiMAtCha Project. All rights reserved.</p>
+  </footer>
+</body>
+</html>
