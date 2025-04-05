@@ -32,16 +32,17 @@
       <h3>Goals and Deliverables</h3>
       <h4>Baseline Plan</h4>
       <ul>
-        <li>Implement the MAtCha Gaussians pipeline (or use an existing implementation).</li>
+        <li>Using existing MAtCha Gaussians pipeline.</li>
         <li>Integrate NeuManifold’s differentiable Marching Cubes (DiffMC) to extract a mesh from MAtCha’s surface representation.</li>
         <li>Introduce a mesh-based loss that backpropagates through the mesh structure.</li>
         <li>Deliver side-by-side visual comparisons and performance graphs.</li>
+        <li>Explore the tradeoffs between using a differentiable mesh layer and not using one.</li>
+        <li>Produce mesh quality metrics testing this new implementation similar to the original papers (e.g. PSNR, LPIPS, etc.)</li>
       </ul>
       <h4>Aspirational Plan</h4>
       <ul>
-        <li>Generate background.</li>
-        <li>Optimize ???</li>
-        <li>Visualize qualitative improvements (e.g., sharper details, smoother surfaces).</li>
+        <li>Generate background, possibly adjust the Differentiable Marching Cubes to function on a nonuniform grid</li>
+        <li>Visualize qualitative improvements (e.g., sharper details, smoother surfaces) </li>
       </ul>
     </section>
 
@@ -49,13 +50,13 @@
       <h3>Schedule</h3>
       <ul>
         <li>
-          <strong>Week 1 (April 7 - 14):</strong> Retesting of the code of NeuManifold and MAtCha on our device. Reproduce Gaussian Surface Elements which can be optimized later.
+          <strong>Week 1 (April 7 - 14):</strong> Learning and retesting of the code of NeuManifold and MAtCha on our device. Reproduce Gaussian Surface Elements which can be optimized later. Allow some initial planning time to discuss task distribution.
         </li>
         <li>
-          <strong>Week 2 (April 14 - 21):</strong> Optimize the Gaussian Surface Elements and make reports for the final project Milestone.
+          <strong>Week 2 (April 14 - 21):</strong> Optimize the Gaussian Surface Elements and make reports for the final project Milestone. Work on general baseline tasks. Write code to add mesh loss to the MAtCha pipeline. 
         </li>
         <li>
-          <strong>Week 3 (April 21 - 28):</strong> Finish the part of the mesh image continuing from Gaussian Surface Elements. Won’t do too much this week because there is exam 2.
+          <strong>Week 3 (April 21 - 28):</strong> Finish the part of the mesh image continuing from Gaussian Surface Elements. Won’t do too much this week because there is exam 2. This week we will conduct most of the time-consuming testing.
         </li>
         <li>
           <strong>Week 4 (April 28 - May 5):</strong> Finish up the rest of the project, the mesh image and Gaussian image, and combine them effectively. Optimize the efficiency and effectiveness, and finish the final presentation and all deliverables.
