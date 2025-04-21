@@ -17,24 +17,24 @@
     <section id="accomplishments">
       <h3>Accomplishments to Date</h3>
       <p>
-        <!-- TODO: Replace this with a short summary of what your group has implemented so far. -->
-        We have set up and verified the baseline MAtCha Gaussian rendering pipeline on our local machines, and begun exploring integration points with NeuManifold’s differentiable marching cubes.
+        We’re combining MAtCha’s chart-based rendering with mesh-level optimization techniques inspired by NeuManifold. The goal is to produce high-quality mesh outputs using fewer input images.
       </p>
     </section>
 
     <section id="prelim-results">
       <h3>Preliminary Results</h3>
       <p>
-        <!-- TODO: Summarize any early visual comparisons, performance graphs, or quantitative metrics. -->
-        Initial renderings demonstrate correct chart‑based shading; geometry extracted via DiffMC shows a coarse mesh that we plan to refine with mesh‑aware loss.
+        So far, we’ve been working on integrating chart outputs with a differentiable Marching Cubes algorithm. We’ve finally gotten it running, and the results are looking great—clean meshes and even some early experiments with colorization, similar to Blender-style visualizations.
       </p>
     </section>
 
     <section id="reflection">
       <h3>Reflection on Progress</h3>
       <p>
-        <!-- TODO: Reflect on how this matches your original plan, any blockers, and lessons learned. -->
-        Our Week 1 goals were met, but integrating backprop through the mesh proved trickier than expected. We spent extra time debugging gradient propagation through the Marching Cubes implementation.
+        The key idea is to bridge MAtCha and mesh optimization through a unified pipeline that enables differentiable mesh loss. This should allow us to better reconstruct geometry and make the pipeline more end-to-end trainable.
+      </p>
+      <p>
+        We’ve also started running mesh evaluations on our dataset and will be expanding that soon. Next steps include designing the training pipeline and creating an interface to visualize the effects of different variables and inputs.
       </p>
     </section>
 
@@ -56,8 +56,7 @@
   </main>
 
   <footer>
-    <p>&copy; 2025 ManiMAtCha Project</p>
+    <p>&copy; 2025 ManiMAtCha Project lol</p>
   </footer>
 </body>
 </html>
-
