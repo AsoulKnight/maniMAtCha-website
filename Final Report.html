@@ -5,21 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ManiMAtCha: Mesh-Level Differentiable Chart-Based Rendering</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #333; margin: 0; padding: 0; }
-    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-    h1 { font-size: 2.5rem; color: #005a9c; margin-bottom: 10px; }
-    h2 { font-size: 1.8rem; margin-top: 40px; color: #004777; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
-    h3 { font-size: 1.4rem; margin-top: 30px; color: #004777; }
-    p { line-height: 1.6; margin: 16px 0; }
-    ol, ul { margin: 16px 0 16px 40px; }
-    li { margin-bottom: 8px; }
-    pre { background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
-    code { font-family: Consolas, 'Courier New', Courier, monospace; background: #e8e8e8; padding: 2px 4px; border-radius: 3px; }
-    img { max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin: 20px 0; }
-    .references li { margin-bottom: 6px; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #fff; 
+      color: #333; 
+      margin: 0; 
+      padding: 0;
+      font-size: 0.9rem;
+    }
+    .container { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px; 
+    }
+    h1 { font-size: 1.8rem; color: #005a9c; margin-bottom: 8px; }
+    h2 { font-size: 1.4rem; margin-top: 30px; color: #004777; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; }
+    h3 { font-size: 1.2rem; margin-top: 20px; color: #004777; }
+    p { line-height: 1.5; margin: 8px 0; }
+    ol, ul { margin: 8px 0 8px 30px; }
+    li { margin-bottom: 6px; }
+    img { 
+      max-width: 48%; 
+      height: auto; 
+      border-radius: 4px; 
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1); 
+      margin: 8px 1%; 
+      vertical-align: top;
+    }
+    .footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: #777; }
     a { color: #0066cc; text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .footer { text-align: center; margin-top: 60px; font-size: 0.9rem; color: #777; }
+    .references li { margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -35,56 +51,45 @@
     <p>Our project builds upon MAtCha’s chart-based differentiable surface reconstruction pipeline by incorporating surface refinement strategies inspired by NeuManifold. The core idea is to improve mesh quality and geometry fidelity on top of the lower number of required input images. We aim to bridge the gap between chart prediction and high-quality mesh extraction by adding a differentiable mesh loss to the pipeline, refining the surface representation without re-optimizing the chart parameterization.</p>
 
     <h3>Baseline: MAtCha Pipeline</h3>
-    <img src="d3cb1207-ff56-47d2-a10d-92bfdd1247b4.png" alt="Overview of MAtCha Gaussians">
-    <p><em>Figure 1: Overview of MAtCha Gaussians. Given a few RGB images and their camera poses obtained, MAtCha first initializes charts using a pretrained monocular depth estimation model. Each chart is represented as a mesh equipped with a UV map, mapping a 2D plane to the 3D surface. We then optimize our charts and enforce their alignment with input. These charts can be further refined using input images and a Gaussian Splatting-based rendering pipeline. This representation allows for reconstructing high-quality surface meshes within minutes, even in sparse-view scenarios.</em></p>
-    <p>MAtCha (Mesh As an Atlas of Charts) reconstructs high-fidelity 3D meshes and photorealistic novel views from sparse RGB inputs (3–10 images). Starting with monocular depth estimation (via DepthAnything), it generates RGB-depth charts that are backprojected into 3D and globally aligned using structure-from-motion (SfM). These charts form an atlas of overlapping surface patches, parameterized as local UV maps, which are populated with 2D Gaussian surfels storing geometry and view-dependent color. A neural deformation field refines surfel positions, while structure-aware losses (depth consistency, depth-order regularization) and photometric optimization correct initial depth errors and ensure geometric plausibility. The result is a detailed mesh combined with efficient Gaussian rendering, balancing the precision of explicit surfaces with the realism of neural volumetric methods—all from extremely sparse inputs.</p>
+    <img src="5d3d9522-647e-4114-9590-5af14e60a4d0.png" alt="MAtCha Pipeline overview">
+    <p><em>Figure 1: Overview of MAtCha Gaussians. Sparse RGB → depth charts → SfM alignment → Gaussian surfels.</em></p>
 
     <h2>Our Extension: Differentiable Mesh Loss with Frozen Charts</h2>
-    <img src="8b03306d-74c4-434a-98c1-4284dd6f3828.png" alt="Mesh rendering loss diagram">
-    <p><em>Figure 2: Mesh rendering loss diagram borrowed from NeuManifold [2]. Using the Gaussian surfels we generate a density grid, compute a mesh, and render using PyTorch3D instead of nvdiffrast. From there we compute an L2 RGB loss with the original ground truth image.</em></p>
-    <p>Our method builds directly on MAtCha’s core free refinement of Gaussian surfels by introducing mesh-level supervision as an additional constraint. We retain MAtCha’s initial chart alignment, along with its lightweight neural deformation model to resolve scale ambiguities. The Gaussian surfels remain central to representing geometry and appearance. During MAtCha’s free Gaussian optimization phase, we introduce a mesh rendering loss computed via differentiable Marching Cubes introduced by the NeuManifold paper. This supplements but does not replace MAtCha’s existing structure-aware losses (depth consistency, depth-order regularization).</p>
-
-    <h2>Unique Contributions and Decisions</h2>
-    <p>To enhance global geometry while avoiding the computational overhead of MAtCha’s non-differentiable multi-resolution TSDF fusion and adaptive tetrahedralization, we introduce selective mesh supervision using their experimental unbounded TSDF extraction with contraction. Starting at iteration 6000 and applied every 25 steps, we extract a mesh via Marching Cubes (resolution 512³) directly from Gaussian density fields using a GaussianExtractor. This mesh is rendered with PyTorch3D, and an L2 RGB loss is computed against ground-truth images, temporarily overriding other losses during those iterations to prioritize surface consistency.</p>
-    <p>The unbounded TSDF method was chosen specifically because its coordinate contraction mechanism integrates seamlessly with autograd-enabled pipelines, unlike MAtCha’s default bounded multi-resolution TSDF or adaptive tetrahedralization, which rely on non-differentiable methods such as Delaunay triangulation. By avoiding these non-differentiable steps, our pipeline maintains end-to-end gradient flow through the Marching Cubes module, enabling direct optimization of Gaussian parameters via mesh rendering feedback. However, it is important to note that the NeuManifold paper uses multi-resolution TSDF and adaptive tetrahedralization in its evaluations, so there will be a significant difference in visual results.</p>
+    <img src="b7a13ce6-392a-4781-8b74-52614571dd5a.png" alt="Differentiable mesh loss diagram">
+    <p><em>Figure 2: Mesh loss diagram (NeuManifold DiffMC + PyTorch3D rendering).</em></p>
+    <p>We introduce mesh-level supervision during the free Gaussian optimization phase by extracting an unbounded TSDF via Marching Cubes every 25 iterations (starting at iteration 6000), rendering it with PyTorch3D, and computing an L2 RGB loss against ground-truth images. This maintains end-to-end gradient flow through the differentiable marching-cubes module.</p>
 
     <h2>Implementation Challenges &amp; Lessons Learned</h2>
     <ul>
-      <li><strong>Scalability:</strong> The differentiable Marching Cubes step is memory-intensive due to the voxel grid resolution and gradient computation. Initial mesh updates took ≈1–2 hours on our local machines; we mitigated this by reducing voxel resolution and filtering the number of Gaussians.</li>
-      <li><strong>Decoupling:</strong> Separating chart refinement from surface optimization simplifies the pipeline but can introduce stability issues in geometry alignment.</li>
-      <li><strong>Differentiable mesh loss:</strong> A powerful supervision signal but significantly increases computational cost, requiring careful batching and memory management.</li>
-      <li><strong>Flexibility:</strong> Our modified pipeline offers a framework for experimenting with alternative loss functions or optimization strategies on mesh outputs without re-training chart prediction.</li>
+      <li><strong>Scalability:</strong> DiffMC is memory-intensive—mitigated by lowering voxel resolution and Gaussian count.</li>
+      <li><strong>Decoupling:</strong> Separating chart refinement and surface optimization can cause alignment instability.</li>
+      <li><strong>Cost:</strong> Mesh losses boost supervision but increase compute; careful batching is essential.</li>
     </ul>
 
     <h2>Results</h2>
     <h3>Baseline Reconstructions</h3>
     <img src="hotdog_baseline.png" alt="Hotdog Baseline">
-    <p><em>Hotdog Baseline</em></p>
     <img src="lego_baseline.png" alt="Lego Baseline">
-    <p><em>Lego Baseline</em></p>
 
     <h3>ManiMAtCha Reconstructions</h3>
     <img src="hotdog_ours.png" alt="Hotdog ManiMAtCha">
-    <p><em>Hotdog ManiMAtCha</em></p>
     <img src="lego_ours.png" alt="Lego ManiMAtCha">
-    <p><em>Lego ManiMAtCha</em></p>
 
     <h2>Contributions</h2>
     <ul>
-      <li><strong>Thien Le:</strong> Main programmer, understanding, debugging, testing and finishing main code</li>
-      <li><strong>Wen Qi:</strong> Initiating ideas, finalizing and wrapping up results</li>
-      <li><strong>Zekai Wang:</strong> Debugging and optimizing the code, generating final results</li>
-      <li><strong>William Ling:</strong> Helping testing and debugging, finalizing and wrapping up results</li>
+      <li><strong>Thien Le:</strong> Lead implementation &amp; testing</li>
+      <li><strong>Wen Qi:</strong> Concept &amp; results finalization</li>
+      <li><strong>Zekai Wang:</strong> Debugging, optimization</li>
+      <li><strong>William Ling:</strong> Testing &amp; wrap-up</li>
     </ul>
 
     <h2>References</h2>
     <ol class="references">
-      <li>Guédon, Antoine, Tomoki Ichikawa, Kohei Yamashita, and Ko Nishino. “MAtCha Gaussians: Atlas of Charts for High-Quality Geometry and Photorealism From Sparse Views.” Proceedings of CVPR, 2025.</li>
-      <li>Wei, Xinyue, Fanbo Xiang, Sai Bi, Anpei Chen, Kalyan Sunkavalli, Zexiang Xu, and Hao Su. “NeuManifold: Neural Watertight Manifold Reconstruction with Efficient and High‑Quality Rendering Support.” ArXiv preprint arXiv:2305.17134, 2023.</li>
+      <li>Guédon et al., “MAtCha Gaussians: Atlas of Charts for High‑Quality Geometry and Photorealism From Sparse Views,” CVPR 2025.</li>
+      <li>Wei et al., “NeuManifold: Neural Watertight Manifold Reconstruction,” arXiv:2305.17134, 2023.</li>
     </ol>
 
-    <h2>Slides and Videos</h2>
-    <p><a href="https://drive.google.com/drive/folders/1y9XsbJRtwHhbzlboXCWrkFYFv8Ny5G5B" target="_blank">https://drive.google.com/drive/folders/1y9XsbJRtwHhbzlboXCWrkFYFv8Ny5G5B</a></p>
+    <p>Slides &amp; Videos: <a href="https://drive.google.com/drive/folders/1y9XsbJRtwHhbzlboXCWrkFYFv8Ny5G5B" target="_blank">Google Drive</a></p>
 
     <div class="footer">
       &copy; 2025 ManiMAtCha Team
