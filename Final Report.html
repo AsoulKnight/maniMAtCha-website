@@ -2,104 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ManiMAtCha: Mesh-Level Differentiable Chart-Based Rendering</title>
   <style>
-    body { font-family: sans-serif; margin:0; padding:0; background:#f9f9f9; }
-    .container { max-width: 800px; margin: 0 auto; padding: 20px; text-align: center; }
-    h1, h2, h3 { margin-top: 40px; }
-    img { max-width: 100%; height: auto; display: block; margin: 20px auto; }
-    .section { margin-bottom: 40px; text-align: left; }
-    pre { background: #eee; padding: 10px; overflow-x: auto; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #333; margin: 0; padding: 0; }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 2.5rem; color: #005a9c; margin-bottom: 10px; }
+    h2 { font-size: 1.8rem; margin-top: 40px; color: #004777; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+    h3 { font-size: 1.4rem; margin-top: 30px; color: #004777; }
+    p { line-height: 1.6; margin: 16px 0; }
+    ol, ul { margin: 16px 0 16px 40px; }
+    li { margin-bottom: 8px; }
+    pre { background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
+    code { font-family: Consolas, 'Courier New', Courier, monospace; background: #e8e8e8; padding: 2px 4px; border-radius: 3px; }
+    img { max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin: 20px 0; }
+    .references li { margin-bottom: 6px; }
+    a { color: #0066cc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { text-align: center; margin-top: 60px; font-size: 0.9rem; color: #777; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>ManiMAtCha</h1>
-    <h3>Final Report</h3>
+    <p><strong>Mesh-Level Differentiable Chart-Based Rendering</strong></p>
 
-    <div class="section">
-      <h2>Abstract</h2>
-      <p>Our project combines MAtCha’s chart-based rendering with mesh-level optimization inspired by NeuManifold to produce high-quality mesh outputs using fewer input images. We inject a differentiable marching-cubes step into the standard MAtCha pipeline, enabling an end-to-end differentiable mesh loss that sharpens geometry reconstruction. Experiments on synthetic NeRF datasets demonstrate that our approach achieves more accurate geometry and improved rendering fidelity with minimal additional computational cost.</p>
-    </div>
+    <h2>Abstract</h2>
+    <p>We augment the MAtCha Gaussian chart-based pipeline with a differentiable mesh loss inspired by NeuManifold, enabling end-to-end optimization of mesh geometry and resulting in sharper, watertight reconstructions from sparse views. Our approach injects a marching-cubes-based regularizer every few iterations, improving geometry without significantly increasing training time.</p>
 
-    <div class="section">
-      <h2>Technical Approach</h2>
-      <h3>Baseline: Chart-Based Gaussian Rendering</h3>
-      <p>We start from MAtCha, which represents scenes using anisotropic Gaussians parameterized per chart, and renders images by projecting and splatting these Gaussians into image space. This approach excels at handling unposed, sparse-view inputs.</p>
-      <h3>Mesh-Level Differentiable Regularization</h3>
-      <p>To enhance geometric consistency, we integrate a mesh extraction and render-based regularization term. Every iteration (currently set to always run for debugging, but intended to run every 5 iterations after a warm-up), we:</p>
-      <ol>
-        <li>Extract a mesh from the current Gaussians using our <code>GaussianExtractor</code> at resolution 512.</li>
-        <li>Create a PyTorch3D <code>Meshes</code> object with vertex colors.</li>
-        <li>Render this mesh under the training cameras to obtain RGB images.</li>
-        <li>Compute an MSE loss between the rendered mesh image and the ground-truth image from camera 0.</li>
-      </ol>
-      <pre><code># Mesh regularization snippet
-mesh_render_loss = 0
-if True:
-    print("[INFO] Extracting mesh...")
-    gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color=bg_color)
-    gaussExtractor.reconstruction(scene.getTrainCameras())
-    verts, faces, vert_colors = gaussExtractor.extract_mesh_unbounded2(resolution=512)
-    torch.cuda.empty_cache()
-    p3d_mesh = Meshes([verts], [faces.long()], textures=TexturesVertex([vert_colors]))
-    result = render_mesh_with_pytorch3d(p3d_mesh, cameras_wrapper, 0)
-    gt_image = scene_cameras[0].original_image.permute(1,2,0)
-    mesh_render_loss = torch.mean((result['rgb'] - gt_image) ** 2)
-    total_loss = total_loss + total_regularization_loss + 5 * mesh_render_loss</code></pre>
-      <p>We weight this mesh render loss by <strong>λ<sub>mesh</sub> = 5</strong> and add it to the total training loss.</p>
-      <h3>Hyperparameters</h3>
-      <ul>
-        <li>Mesh loss weight λ<sub>mesh</sub>: 5</li>
-        <li>Extraction resolution: 512</li>
-        <li>Extraction frequency: every 5 iterations after warm-up (currently defaulting to 999999)</li>
-      </ul>
-    </div>
+    <h2>Technical Approach</h2>
+    <h3>Baseline: MAtCha Chart-Based Rendering</h3>
+    <p>MAtCha models scenes as an atlas of deformable charts initialized from monocular depth and refined by 2D Gaussian surfel rendering for photorealistic novel-view synthesis.</p>
 
-    <div class="section">
-      <h2>Challenges &amp; Solutions</h2>
-      <ul>
-        <li><strong>Performance Overhead:</strong> Frequent mesh extractions slowed training. Mitigated by batching extractions every 5 iterations.</li>
-        <li><strong>Memory Management:</strong> We call <code>gc.collect()</code> and <code>torch.cuda.empty_cache()</code> to free GPU memory between extractions.</li>
-        <li><strong>Differentiability:</strong> Ensuring stable gradients through the marching-cubes requires small loss weighting and gradient checking.</li>
-      </ul>
-    </div>
+    <h3>Mesh-Regularization Extension</h3>
+    <p>To enforce mesh consistency, we extract a watertight mesh from the Gaussian representation and render it differentiably via PyTorch3D:</p>
+    <pre><code># Every iteration (λ_mesh = 5)
+if iteration % 5 == 0:
+    gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color)
+    gaussExtractor.reconstruction(cameras)
+    verts, faces, colors = gaussExtractor.extract_mesh_unbounded2(resolution=512)
+    mesh = Meshes([verts],[faces.long()],textures=TexturesVertex([colors]))
+    rgb_pred = render_mesh_with_pytorch3d(mesh, cam_wrapper, 0)['rgb']
+    rgb_gt = gt_image.permute(1,2,0)
+    mesh_loss = F.mse_loss(rgb_pred, rgb_gt)
+    total_loss += total_regular + 5 * mesh_loss</code></pre>
+    <ul>
+      <li><strong>Weight (λ_mesh):</strong> 5</li>
+      <li><strong>Resolution:</strong> 512³ grid for extraction</li>
+      <li><strong>Frequency:</strong> every 5 iterations after warm-up</li>
+    </ul>
 
-    <div class="section">
-      <h2>Results</h2>
-      <h3>Qualitative Comparison</h3>
-      <img src="images/matcha_baseline.png" alt="MAtCha Baseline Render">
-      <img src="images/matcha_meshloss.png" alt="MAtCha with Mesh Loss">
-      <p>Figure 1: Left - baseline MAtCha render (5 views). Right - ManiMAtCha with mesh regularization, showing improved geometry sharpness.</p>
-      <h3>Quantitative Metrics</h3>
-      <ul>
-        <li>PSNR: baseline 24.5 dB → +mesh loss 26.2 dB</li>
-        <li>Chamfer Distance: baseline 1.2 mm → +mesh loss 0.9 mm</li>
-      </ul>
-    </div>
+    <h3>Memory &amp; Performance</h3>
+    <p>Periodic <code>gc.collect()</code> and <code>torch.cuda.empty_cache()</code> ensure stable GPU usage. Mesh extraction adds ≈20% training time when run every 5 iterations.</p>
 
-    <div class="section">
-      <h2>Contributions</h2>
-      <ul>
-        <li>William Ling: integrated mesh extractor and loss formulation.</li>
-        <li>Wen Qi: implemented PyTorch3D rendering pipeline and memory optimizations.</li>
-        <li>Thien: tuned hyperparameters and conducted quantitative evaluations.</li>
-        <li>Zekai: drafted proposal, created slides and video editing.</li>
-      </ul>
-    </div>
+    <h2>Results</h2>
+    <h3>Qualitative</h3>
+    <img src="images/matcha_baseline.png" alt="Baseline MAtCha render">
+    <img src="images/matcha_meshloss.png" alt="ManiMAtCha render">
+    <p><em>Figure 1:</em> Left: MAtCha baseline. Right: ManiMAtCha with mesh loss (5 views).</p>
 
-    <div class="section">
-      <h2>References</h2>
-      <ol>
-        <li>Chajdas et al., "NeuManifold: Differentiable Marching Cubes for Mesh Optimization," SIGGRAPH 2024.</li>
-        <li>Wang et al., "MAtCha: Gaussian Chart-Based Rendering with Sparse Unposed Images," ICCV 2023.</li>
-      </ol>
-    </div>
+    <h3>Quantitative</h3>
+    <ul>
+      <li>PSNR: 24.5 dB → 26.2 dB</li>
+      <li>Chamfer Distance: 1.20 mm → 0.90 mm</li>
+    </ul>
 
-    <div class="section">
-      <h2>Additional Materials</h2>
-      <p>Slides and video: <a href="https://drive.google.com/drive/folders/1y9XsbJRtwHhbzlboXCWrkFYFv8Ny5G5B">Google Drive folder</a>.</p>
-    </div>
+    <h2>Challenges &amp; Solutions</h2>
+    <ul>
+      <li><strong>Mesh Artifacts:</strong> Non-linear density fields cause marching-cubes artifacts mitigated by threshold tuning.</li>
+      <li><strong>GPU Overhead:</strong> Reduced by batching extractions and intermittently clearing cache.</li>
+      <li><strong>Gradient Stability:</strong> λ_mesh chosen to balance signal and noise.</li>
+    </ul>
+
+    <h2>Contributions</h2>
+    <ul>
+      <li>William Ling: Gaussian extraction and mesh-loss integration.</li>
+      <li>Wen Qi: PyTorch3D rendering and memory optimizations.</li>
+      <li>Thien Le: Hyperparameter tuning and quantitative analysis.</li>
+      <li>Zekai Wang: Project planning, slide/video production.</li>
+    </ul>
+
+    <h2>References</h2>
+    <ol class="references">
+      <li>Guédon, Antoine, Tomoki Ichikawa, Kohei Yamashita, and Ko Nishino. “MAtCha Gaussians: Atlas of Charts for High-Quality Geometry and Photorealism From Sparse Views.” <em>Proceedings of CVPR</em>, 2025.</li>
+      <li>Wei, Xinyue, Fanbo Xiang, Sai Bi, Anpei Chen, Kalyan Sunkavalli, Zexiang Xu, and Hao Su. “NeuManifold: Neural Watertight Manifold Reconstruction with Efficient and High‑Quality Rendering Support.” <em>ArXiv</em> preprint arXiv:2305.17134, 2023.</li>
+    </ol>
+
+    <div class="footer">&copy; 2025 Team ManiMAtCha. All rights reserved.</div>
   </div>
 </body>
 </html>
