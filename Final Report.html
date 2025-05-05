@@ -51,11 +51,11 @@
     <p>Our project builds upon MAtCha’s chart-based differentiable surface reconstruction pipeline by incorporating surface refinement strategies inspired by NeuManifold. The core idea is to improve mesh quality and geometry fidelity on top of the lower number of required input images. We aim to bridge the gap between chart prediction and high-quality mesh extraction by adding a differentiable mesh loss to the pipeline, refining the surface representation without re-optimizing the chart parameterization.</p>
 
     <h3>Baseline: MAtCha Pipeline</h3>
-    <img src="5d3d9522-647e-4114-9590-5af14e60a4d0.png" alt="MAtCha Pipeline overview">
+    <img src="matcha_pipeline.png" alt="MAtCha pipeline overview">
     <p><em>Figure 1: Overview of MAtCha Gaussians. Sparse RGB → depth charts → SfM alignment → Gaussian surfels.</em></p>
 
     <h2>Our Extension: Differentiable Mesh Loss with Frozen Charts</h2>
-    <img src="b7a13ce6-392a-4781-8b74-52614571dd5a.png" alt="Differentiable mesh loss diagram">
+    <img src="neumanifold_pipeline.png" alt="NeuManifold pipeline extension">
     <p><em>Figure 2: Mesh loss diagram (NeuManifold DiffMC + PyTorch3D rendering).</em></p>
     <p>We introduce mesh-level supervision during the free Gaussian optimization phase by extracting an unbounded TSDF via Marching Cubes every 25 iterations (starting at iteration 6000), rendering it with PyTorch3D, and computing an L2 RGB loss against ground-truth images. This maintains end-to-end gradient flow through the differentiable marching-cubes module.</p>
 
@@ -92,6 +92,7 @@
     <p>Slides &amp; Videos: <a href="https://drive.google.com/drive/folders/1y9XsbJRtwHhbzlboXCWrkFYFv8Ny5G5B" target="_blank">Google Drive</a></p>
 
     <div class="footer">
+      &copy; 2025 ManiMAtCha Team
     </div>
   </div>
 </body>
