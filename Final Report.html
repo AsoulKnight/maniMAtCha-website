@@ -31,29 +31,43 @@
     <p>We augment the MAtCha Gaussian chart-based pipeline with a differentiable mesh loss inspired by NeuManifold, enabling end-to-end optimization of mesh geometry and resulting in sharper, watertight reconstructions from sparse views. Our approach injects a marching-cubes-based regularizer every few iterations, improving geometry without significantly increasing training time.</p>
 
     <h2>Technical Approach</h2>
-    <h3>Baseline: MAtCha Chart-Based Rendering</h3>
-    <p>MAtCha models scenes as an atlas of deformable charts initialized from monocular depth and refined by 2D Gaussian surfel rendering for photorealistic novel-view synthesis.</p>
+    <p>Our project builds upon MAtCha’s chart-based differentiable surface reconstruction pipeline by incorporating surface refinement strategies inspired by NeuManifold. The core idea is to improve mesh quality and geometry fidelity while reducing the number of required input images. We aim to bridge the gap between chart prediction and high-quality mesh extraction by adding a differentiable mesh loss to the pipeline, refining the surface representation without re-optimizing the chart parameterization.</p>
 
-    <h3>Mesh-Regularization Extension</h3>
-    <p>To enforce mesh consistency, we extract a watertight mesh from the Gaussian representation and render it differentiably via PyTorch3D:</p>
-    <pre><code># Every iteration (λ_mesh = 5)
-if iteration % 5 == 0:
-    gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color)
-    gaussExtractor.reconstruction(cameras)
-    verts, faces, colors = gaussExtractor.extract_mesh_unbounded2(resolution=512)
-    mesh = Meshes([verts],[faces.long()],textures=TexturesVertex([colors]))
-    rgb_pred = render_mesh_with_pytorch3d(mesh, cam_wrapper, 0)['rgb']
-    rgb_gt = gt_image.permute(1,2,0)
-    mesh_loss = F.mse_loss(rgb_pred, rgb_gt)
-    total_loss += total_regular + 5 * mesh_loss</code></pre>
+    <h3>Baseline: MAtCha Pipeline</h3>
+    <p>MAtCha (Monocular Atlas Charting) generates multi-chart surface parameterizations from monocular RGB images. The method takes a sparse set of views, predicts depth maps via monocular depth estimation (DepthAnything), and generates RGB-depth tracks, which are backprojected into 3D space. The pipeline uses structure-from-motion (SfM) to align and place them into a common coordinate frame. The aligned depth maps allow the model to create local charts that approximate the surface manifold. Then it initializes Gaussian surface elements across the manifold and optimizes to refine both the geometry and color fields across the charts.</p>
+
+    <h3>Our Extension: Differentiable Mesh Loss with Frozen Charts</h3>
+    <p>While the original MAtCha paper focuses extensively on jointly refining the chart parameterization and surface Gaussians, we decouple these two processes. Specifically, we freeze the chart layout after the initial alignment and focus entirely on refining the Gaussian surface elements using mesh-level supervision. This idea draws inspiration from NeuManifold, which introduces mesh optimization within implicit surface representations. However, instead of working with neural fields, we directly optimize Gaussian primitives anchored on the precomputed charts.</p>
+    <p>This divergence from MAtCha allows us to introduce a differentiable Marching Cubes module, which converts the Gaussian field into a high-resolution mesh. We compute rendering losses using the differentiable mesh output, enabling gradients to backpropagate into the Gaussian parameters (position, scale, rotation). Our losses primarily include a combination of:</p>
     <ul>
-      <li><strong>Weight (λ_mesh):</strong> 5</li>
-      <li><strong>Resolution:</strong> 512³ grid for extraction</li>
-      <li><strong>Frequency:</strong> every 5 iterations after warm-up</li>
+      <li>Photometric consistency loss across views</li>
+      <li>Silhouette loss using masks from input images</li>
+      <li>Chamfer distance between predicted mesh and ground-truth samples (when available)</li>
+      <li>Mesh regularization losses such as smoothness or normal consistency</li>
+    </ul>
+    <p>This pipeline enables us to render the extracted mesh, compare it to ground-truth or image-space references, and update the surface Gaussians while keeping the chart parameterization intact.</p>
+
+    <h3>Implementation Challenges</h3>
+    <ul>
+      <li><strong>Scalability:</strong> The differentiable Marching Cubes step is memory-intensive due to the voxel grid resolution and gradient computation. Initial mesh updates took ≈1–2 hours on our local machines; we mitigated this by reducing voxel resolution and filtering the number of Gaussians.</li>
+      <li><strong>Hole Artifacts:</strong> Freezing charts led to geometric misalignments and holes in extracted meshes. We are exploring mild regularization to encourage better Gaussian coverage without re-optimizing charts.</li>
     </ul>
 
-    <h3>Memory &amp; Performance</h3>
-    <p>Periodic <code>gc.collect()</code> and <code>torch.cuda.empty_cache()</code> ensure stable GPU usage. Mesh extraction adds ≈20% training time when run every 5 iterations.</p>
+    <h3>Unique Contributions and Decisions</h3>
+    <ul>
+      <li>We treat the chart layout as a fixed surface prior, decoupling chart prediction from surface refinement.</li>
+      <li>We integrate NeuManifold-style differentiable mesh losses to improve surface accuracy.</li>
+      <li>We introduce modular optimization, separating chart initialization from Gaussian refinement.</li>
+      <li>We developed a prototype visualization interface to inspect mesh changes interactively as Gaussian parameters vary.</li>
+    </ul>
+
+    <h3>Lessons Learned</h3>
+    <ul>
+      <li>Decoupling chart refinement from surface optimization simplifies the pipeline but can introduce stability issues in geometry alignment.</li>
+      <li>Differentiable mesh loss is a powerful supervision signal but significantly increases computational cost, requiring careful batching and memory management.</li>
+      <li>Freezing chart geometry enhances modularity and interpretability but demands robust initialization to avoid compounding errors.</li>
+      <li>Our modified pipeline offers a flexible framework for experimenting with alternative loss functions or optimization strategies on mesh outputs without re-training chart prediction.</li>
+    </ul>
 
     <h2>Results</h2>
     <h3>Qualitative</h3>
@@ -63,8 +77,7 @@ if iteration % 5 == 0:
 
     <h3>Quantitative</h3>
     <ul>
-      <li>PSNR: 24.5 dB → 26.2 dB</li>
-      <li>Chamfer Distance: 1.20 mm → 0.90 mm</li>
+      <!-- Metrics to be added -->
     </ul>
 
     <h2>Challenges &amp; Solutions</h2>
@@ -76,10 +89,7 @@ if iteration % 5 == 0:
 
     <h2>Contributions</h2>
     <ul>
-      <li>William Ling: Gaussian extraction and mesh-loss integration.</li>
-      <li>Wen Qi: PyTorch3D rendering and memory optimizations.</li>
-      <li>Thien Le: Hyperparameter tuning and quantitative analysis.</li>
-      <li>Zekai Wang: Project planning, slide/video production.</li>
+      <!-- Contributions to be added -->
     </ul>
 
     <h2>References</h2>
